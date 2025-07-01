@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/aslan11-temporal-invoice-mcp-badge.png)](https://mseep.ai/app/aslan11-temporal-invoice-mcp)
+
 # Invoice Demo with Temporal + MCP
 
 ### Prerequisites:
