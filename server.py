@@ -16,7 +16,7 @@ mcp = FastMCP("invoice_processor")
 
 
 @mcp.tool()
-async def trigger(invoice: Dict) -> Dict[str, str]:
+async def process_invoice(invoice: Dict) -> Dict[str, str]:
     """Start the InvoiceWorkflow with the given invoice JSON."""
     client = await _client()
     handle = await client.start_workflow(
@@ -29,7 +29,7 @@ async def trigger(invoice: Dict) -> Dict[str, str]:
 
 
 @mcp.tool()
-async def approve(workflow_id: str, run_id: str) -> str:
+async def approve_invoice(workflow_id: str, run_id: str) -> str:
     """Signal approval for the invoice workflow."""
     client = await _client()
     handle = client.get_workflow_handle(workflow_id=workflow_id, run_id=run_id)
@@ -38,7 +38,7 @@ async def approve(workflow_id: str, run_id: str) -> str:
 
 
 @mcp.tool()
-async def reject(workflow_id: str, run_id: str) -> str:
+async def reject_invoice(workflow_id: str, run_id: str) -> str:
     """Signal rejection for the invoice workflow."""
     client = await _client()
     handle = client.get_workflow_handle(workflow_id=workflow_id, run_id=run_id)
@@ -47,7 +47,7 @@ async def reject(workflow_id: str, run_id: str) -> str:
 
 
 @mcp.tool()
-async def status(workflow_id: str, run_id: str) -> str:
+async def invoice_status(workflow_id: str, run_id: str) -> str:
     """Return current status of the workflow."""
     client = await _client()
     handle = client.get_workflow_handle(workflow_id=workflow_id, run_id=run_id)
