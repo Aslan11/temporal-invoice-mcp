@@ -1,9 +1,6 @@
 from __future__ import annotations
 
-import asyncio
 from datetime import datetime, timedelta
-from dataclasses import dataclass
-from typing import List
 
 from temporalio import workflow
 from temporalio.common import RetryPolicy

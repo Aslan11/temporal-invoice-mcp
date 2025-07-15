@@ -1,11 +1,15 @@
 import os
 import uuid
+import logging
 from typing import Dict
 
 from mcp.server.fastmcp import FastMCP
 from temporalio.client import Client
 
 from workflows import InvoiceWorkflow
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 async def _client() -> Client:
@@ -18,6 +22,9 @@ mcp = FastMCP("invoice_processor")
 @mcp.tool()
 async def process_invoice(invoice: Dict) -> Dict[str, str]:
     """Start the InvoiceWorkflow with the given invoice JSON."""
+    logger.info("Processing invoice %s", invoice.get("invoice_id"))
+    if hasattr(mcp, "progress"):
+        await mcp.progress("starting workflow")
     client = await _client()
     handle = await client.start_workflow(
         InvoiceWorkflow.run,
@@ -25,36 +32,59 @@ async def process_invoice(invoice: Dict) -> Dict[str, str]:
         id=f"invoice-{uuid.uuid4()}",
         task_queue="invoice-task-queue",
     )
+    logger.info("Started workflow %s", handle.id)
+    if hasattr(mcp, "progress"):
+        await mcp.progress("workflow started")
     return {"workflow_id": handle.id, "run_id": handle.result_run_id}
 
 
 @mcp.tool()
 async def approve_invoice(workflow_id: str, run_id: str) -> str:
     """Signal approval for the invoice workflow."""
+    logger.info("Approving invoice workflow %s", workflow_id)
+    if hasattr(mcp, "progress"):
+        await mcp.progress("sending approve signal")
     client = await _client()
     handle = client.get_workflow_handle(workflow_id=workflow_id, run_id=run_id)
     await handle.signal("ApproveInvoice")
+    if hasattr(mcp, "progress"):
+        await mcp.progress("approve signal sent")
+    logger.info("Approve signal sent for %s", workflow_id)
     return "APPROVED"
 
 
 @mcp.tool()
 async def reject_invoice(workflow_id: str, run_id: str) -> str:
     """Signal rejection for the invoice workflow."""
+    logger.info("Rejecting invoice workflow %s", workflow_id)
+    if hasattr(mcp, "progress"):
+        await mcp.progress("sending reject signal")
     client = await _client()
     handle = client.get_workflow_handle(workflow_id=workflow_id, run_id=run_id)
     await handle.signal("RejectInvoice")
+    if hasattr(mcp, "progress"):
+        await mcp.progress("reject signal sent")
+    logger.info("Reject signal sent for %s", workflow_id)
     return "REJECTED"
 
 
 @mcp.tool()
 async def invoice_status(workflow_id: str, run_id: str) -> str:
     """Return current status of the workflow."""
+    logger.info("Checking status for workflow %s", workflow_id)
+    if hasattr(mcp, "progress"):
+        await mcp.progress("fetching status")
     client = await _client()
     handle = client.get_workflow_handle(workflow_id=workflow_id, run_id=run_id)
     desc = await handle.describe()
     status = await handle.query("GetInvoiceStatus")
-    return f"Invoice with ID {workflow_id} is currently {status}. " \
-           f"Workflow status: {desc.status.name}"
+    if hasattr(mcp, "progress"):
+        await mcp.progress(f"status: {status}")
+    logger.info("Workflow %s status %s", workflow_id, status)
+    return (
+        f"Invoice with ID {workflow_id} is currently {status}. "
+        f"Workflow status: {desc.status.name}"
+    )
 
 
 if __name__ == "__main__":
