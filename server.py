@@ -15,6 +15,27 @@ async def _client() -> Client:
 mcp = FastMCP("invoice_processor")
 
 
+@mcp.prompt()
+async def approve_invoice_prompt(workflow_id: str, run_id: str) -> str:
+    """Request human approval for the given workflow."""
+    return (
+        f"Invoice workflow {workflow_id} is awaiting approval. "
+        f"If you wish to approve it call the 'approve_invoice' tool with"
+        f" workflow_id '{workflow_id}' and run_id '{run_id}'. "
+        f"To deny it instead use 'reject_invoice' with the same arguments."
+    )
+
+
+@mcp.prompt()
+async def deny_invoice_prompt(workflow_id: str, run_id: str) -> str:
+    """Request human denial for the given workflow."""
+    return (
+        f"Invoice workflow {workflow_id} can be denied by calling"
+        f" 'reject_invoice' with workflow_id '{workflow_id}' and run_id "
+        f"'{run_id}'. If you would rather approve, use 'approve_invoice'."
+    )
+
+
 @mcp.tool()
 async def process_invoice(invoice: Dict) -> Dict[str, str]:
     """Start the InvoiceWorkflow with the given invoice JSON."""
