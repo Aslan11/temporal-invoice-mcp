@@ -1,6 +1,6 @@
 import os
 import uuid
-from typing import Dict
+from typing import Dict, Any
 
 from mcp.server.fastmcp import FastMCP
 from temporalio.client import Client
@@ -16,12 +16,18 @@ mcp = FastMCP("invoice_processor")
 
 
 @mcp.prompt()
-async def process_invoice_prompt() -> str:
-    """Explain how to start processing an invoice."""
-    return (
-        "Call the 'process_invoice' tool with the invoice JSON to start the "
-        "workflow. You can use the sample in 'samples/invoice_acme.json'."
-    )
+async def process_invoice_prompt() -> Dict[str, Any]:
+    """Prompt the user to submit invoice JSON for processing."""
+    return {
+        "tool": "process_invoice",
+        "fields": [
+            {
+                "name": "invoice",
+                "type": "textarea",
+                "label": "Invoice JSON",
+            }
+        ],
+    }
 
 
 @mcp.tool()
@@ -35,6 +41,24 @@ async def process_invoice(invoice: Dict) -> Dict[str, str]:
         task_queue="invoice-task-queue",
     )
     return {"workflow_id": handle.id, "run_id": handle.result_run_id}
+
+
+@mcp.prompt()
+async def approve_invoice_prompt() -> str:
+    """Guide the user to approve a workflow."""
+    return (
+        "Call the 'approve_invoice' tool with the workflow_id and run_id to "
+        "approve the invoice."
+    )
+
+
+@mcp.prompt()
+async def reject_invoice_prompt() -> str:
+    """Guide the user to reject a workflow."""
+    return (
+        "Call the 'reject_invoice' tool with the workflow_id and run_id to "
+        "reject the invoice."
+    )
 
 
 @mcp.tool()
