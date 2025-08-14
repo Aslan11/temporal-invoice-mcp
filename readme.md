@@ -1,5 +1,9 @@
 # Invoice Demo with Temporal + MCP
 
+### Video:
+
+[![Watch the demo](./demo-image.png)](https://www.youtube.com/watch?v=jlYYCT0K1cw)
+
 ### Prerequisites:
 
 - Python3+
