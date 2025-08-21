@@ -1,9 +1,6 @@
 from __future__ import annotations
 
-import asyncio
 from datetime import datetime, timedelta
-from dataclasses import dataclass
-from typing import List
 
 from temporalio import workflow
 from temporalio.common import RetryPolicy
@@ -63,7 +60,7 @@ class InvoiceWorkflow:
         if self.approved is None:
             raise ApplicationError("Invoice approval status is not set yet.")
         return self.approved
-    
+
     @workflow.query
     async def GetInvoiceStatus(self) -> str:
         return self.status
@@ -71,7 +68,9 @@ class InvoiceWorkflow:
     @workflow.run
     async def run(self, invoice: dict) -> str:
         self.status = "PENDING-VALIDATION"
-        workflow.logger.info(f"Starting workflow for invoice {invoice.get('invoice_id')}")
+        workflow.logger.info(
+            f"Starting workflow for invoice {invoice.get('invoice_id')}"
+        )
         await workflow.execute_activity(
             validate_against_erp,
             invoice,
@@ -84,7 +83,9 @@ class InvoiceWorkflow:
         )
 
         self.status = "PENDING-APPROVAL"
-        workflow.logger.info(f"Waiting for approval for invoice {invoice.get('invoice_id')}")
+        workflow.logger.info(
+            f"Waiting for approval for invoice {invoice.get('invoice_id')}"
+        )
         # Wait for the approval signal
 
         await workflow.wait_condition(
@@ -94,18 +95,25 @@ class InvoiceWorkflow:
 
         if not self.approved:
             workflow.logger.info("REJECTED")
-            self.status= "REJECTED"
+            self.status = "REJECTED"
             return "REJECTED"
 
         self.status = "APPROVED"
-        workflow.logger.info(f"Invoice {invoice.get('invoice_id')} approved, processing line items")
+        workflow.logger.info(
+            f"Invoice {invoice.get('invoice_id')} approved, processing line items"
+        )
         # Process each line item in parallel
         results = []
         for line in invoice.get("lines", []):
-            handle = await workflow.start_child_workflow(PayLineItem.run, line,)
-            workflow.logger.info(f"Started child workflow for line item {line} with handle {handle}")
+            handle = await workflow.start_child_workflow(
+                PayLineItem.run,
+                line,
+            )
+            workflow.logger.info(
+                f"Started child workflow for line item {line} with handle {handle}"
+            )
             results.append(handle)
-        
+
         workflow.logger.info(f"Waiting for {len(results)} child workflows to complete")
         self.status = "PAYING"
         failedcount = 0
@@ -113,12 +121,14 @@ class InvoiceWorkflow:
             try:
                 await handle
                 wf_result = handle.result()
-                workflow.logger.warning(f"Child workflow completed with result: {wf_result}")
+                workflow.logger.warning(
+                    f"Child workflow completed with result: {wf_result}"
+                )
             except Exception as e:
                 workflow.logger.warning(f"Child workflow failed with exception: {e}")
                 wf_result = "ERROR"
-            
-            workflow.logger.info(f"Child workflow result: {wf_result}") 
+
+            workflow.logger.info(f"Child workflow result: {wf_result}")
             if wf_result is None:
                 workflow.logger.warning("Child workflow returned None, there's a bug")
                 failedcount += 1
@@ -129,11 +139,11 @@ class InvoiceWorkflow:
                 self.status = "FAILED"
             elif wf_result == "SUCCESS":
                 workflow.logger.info("LINE ITEM PAID SUCCESSFULLY")
-                
+
         if failedcount > 0:
             workflow.logger.warning(f"{failedcount} line items failed to pay")
             self.status = "FAILED"
-        else:   
+        else:
             workflow.logger.info("All line items paid successfully")
             self.status = "PAID"
         return self.status
